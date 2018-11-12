@@ -15,6 +15,7 @@ numpy = "*"
 pandas = "*"
 mysql-connector-python = "*"
 gunicorn = "*"
+dash-table-experiments = "*"
 
 [requires]
 
