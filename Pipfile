@@ -1,0 +1,21 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+
+[packages]
+
+dash = "*"	
+dash-renderer = "*"
+dash-html-components = "*"
+dash-core-components = '==0.13.0-rc4'
+plotly = "*"
+numpy = "*"
+pandas = "*"
+mysql-connector-python = "*"
+gunicorn = "*"
+
+[requires]
+
+python_version = "3.6"
