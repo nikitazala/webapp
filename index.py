@@ -4,6 +4,7 @@ import dash_html_components as html
 import numpy as np
 import pandas as pd
 import mysql.connector
+import dash_table_experiments as dte
 
 cnx = mysql.connector.connect(user='user', password='password',
                               host='cs336-nz132.cgwqde3pqnzp.us-east-2.rds.amazonaws.com',
@@ -85,10 +86,33 @@ def generate_drinker(d):
 		cursor.execute(query)
 		temp_b_n = cr_list(cursor)
 		beer_g_1.append(temp_b_n[0])
-	print(beer_g)
-	print(temp_b_n)
+	#print(beer_g)
+	#print(temp_b_n)
 	
-	val = [1,2,3,4,5,6,7,8]
+	query = "select transaction_id,bar_id,time,total from transaction where drinker_id="+str(d)
+	cursor.execute(query)
+	temp_transaction = cr_list(cursor)
+	temp_tid = []
+	temp_bid=[]
+	temp_time=[]
+	temp_total = []
+	for i in temp_transaction:
+		temp_tid.append(i[0])
+		query = "select name from bar where bar_id="+str(i[1])
+		cursor.execute(query)
+		temp_bar_n = cr_list(cursor)
+		#beer_g_1.append(temp_b_n[0])
+		temp_bid.append(temp_bar_n[0])
+		temp_time.append(i[2])
+		temp_total.append(i[3])
+	print(temp_tid)
+	temp_tran = pd.DataFrame({'transaction_id':temp_tid})
+	temp_tran['Bar']=temp_bid
+	temp_tran['time']=temp_time
+	temp_tran['Total']=temp_total
+	
+	
+	#val = [1,2,3,4,5,6,7,8]
 	x = [html.Div(children=[
         html.Div(style={'width':'27%'} ,children=[
             html.H4(style={'font-weight':'bold'},children='Drinker Info'),
@@ -118,7 +142,36 @@ def generate_drinker(d):
 				}
 			)
         ], className="six columns"),
-    ], className="row"),html.Hr()] 
+    ], className="row"),html.Hr(),
+	html.Div([
+    		html.Div(style={},children = [
+			html.H4(style={'font-weight':'bold'},children='Transactions'),
+			dte.DataTable(
+			rows=temp_tran.to_dict('records'),
+
+			filterable=True,
+			sortable=True,
+			id='transactions'
+		),
+		
+		],className="six columns"),
+		html.Div([html.H4(style={'font-weight':'bold'},children='Spending Graph'),
+		dcc.Graph(
+			id='graph_spend',
+				figure={
+					'data': [
+						{'x': temp_time, 'y': temp_total , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Time'},
+						'yaxis' : {'title':'Spending'},
+					}
+				}
+		)],className="six columns"),
+	], className="row"),
+	
+	] 
 	return x
 	
 #initialize application
@@ -135,6 +188,7 @@ app.layout = html.Div(style={'backgroundImage':'url("http://www.designbolts.com/
 			value = 'drinker',
 			), 
 	html.Div(style={'width':'100%'} , id='output'),
+    html.Div(dte.DataTable(rows=[{}]), style={'display': 'none'})
 
 ])
 
