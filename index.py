@@ -257,7 +257,7 @@ app.layout = html.Div(style={'backgroundImage':'url("http://www.designbolts.com/
 	dcc.Tabs(
 			id='tab',
 			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'}],
-			value = 'bar',
+			value = 'drinker',
 			), 
 	html.Div(style={'width':'100%'} , id='output'),
     html.Div(dte.DataTable(rows=[{}]), style={'display': 'none'})
