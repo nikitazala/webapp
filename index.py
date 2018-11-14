@@ -52,8 +52,22 @@ def generate_tab(tab):
         ], className="six columns"),
     ], className="row"),html.Hr(),
 		html.Div(style={},id = 'd_info')]
+		
 	elif (tab == "bar"):
-		x = "Bar"
+		x = [html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
+        html.Div(style={'width':'30%'} ,children=[
+            html.Label(style={'font':'20px Britannic, serif'},children='Select a bar:')
+        ], className="six columns"),
+		html.Div(style={'width':'65%'} ,children=[
+           html.Div(style={'width':'100%'},children=dcc.Dropdown(
+			#style={'font':'25px'}
+			id='bar_drop',
+			options=opt,
+			value =1
+		))    
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+		html.Div(style={},id = 'b_info')]
 	elif (tab == "beer"):
 		x = "Beer"
 	else:
@@ -116,7 +130,7 @@ def generate_drinker(d):
 	x = [html.Div(children=[
         html.Div(style={'width':'27%'} ,children=[
             html.H4(style={'font-weight':'bold'},children='Drinker Info'),
-            html.Div(style={'font-size':'15px',},id='rel_domains',children =[
+            html.Div(style={'font-size':'15px',},id='drinker_information',children =[
 			html.Table([
 			html.Tr( [html.Td(children = "Drinker ID"),html.Td(children = ":"),html.Td(children = temp[0][0])]),
 			html.Tr( [html.Td(children = "Name"),html.Td(children = ":"),html.Td(children = temp[0][1])]),
@@ -174,6 +188,64 @@ def generate_drinker(d):
 	] 
 	return x
 	
+def generate_beer(b):
+	query = "select bar_id,name,addr,city,phone,cast(open_hours as time),cast(close_hours as time) from bar where bar_id="+str(b)
+	cursor.execute(query)
+	temp = cr_list(cursor)
+	#print(temp)
+	
+	query = "select hour(time) as t, count(1), sum(total) from transaction where bar_id = "+ str(b) +" group by t order by t"
+	cursor.execute(query)
+	temp_td = cr_list(cursor)
+	temp_t=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+	temp_c=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+	temp_tot = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+	for i in temp_td:
+		temp_c[i[0]] = i[1]
+		temp_tot[i[0]] = i[2]
+	s_c = sum(temp_c)
+	s_tot = sum(temp_tot)
+	for i in range(24):
+		temp_c[i] = (temp_c[i]/s_c)*100
+		temp_tot[i] = (temp_tot[i]/s_tot)*100
+		
+	
+	val = [1,2,3,4,5,6,7,8]	
+	x = [html.Div(children=[
+        html.Div(style={'width':'27%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Bar Info'),
+            html.Div(style={'font-size':'15px',},id='bar_information',children =[
+			html.Table([
+			html.Tr( [html.Td(children = "Bar ID"),html.Td(children = ":"),html.Td(children = temp[0][0])]),
+			html.Tr( [html.Td(children = "Name"),html.Td(children = ":"),html.Td(children = temp[0][1])]),
+			html.Tr( [html.Td(children = "Address"),html.Td(children = ":"),html.Td(children = temp[0][2]+", "+temp[0][3])]),
+			html.Tr( [html.Td(children = "Phone"),html.Td(children = ":"),html.Td(children = temp[0][4])]),
+			html.Tr( [html.Td(children = "Hours"),html.Td(children = ":"),html.Td(children = str(temp[0][5])+" to "+str(temp[0][6]))]),
+			])
+			])
+        ], className="six columns"),
+		html.Div(style={'width':'67%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Time distribution of sales'),
+            dcc.Graph(
+				id='td_bar',
+				figure={
+					'data': [
+						{'x': temp_t, 'y': temp_c , 'name': 'People','type': 'line'},
+						{'x': temp_t, 'y': temp_tot , 'name': 'Income', 'type': 'line'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Time'},
+						#'yaxis' : {'title':'Frequency'},
+					}
+				}
+			)
+        ], className="six columns"),
+    ], className="row"),html.Hr()
+	
+	]
+	return x
+	
 #initialize application
 app = dash.Dash()
 server = app.server
@@ -185,7 +257,7 @@ app.layout = html.Div(style={'backgroundImage':'url("http://www.designbolts.com/
 	dcc.Tabs(
 			id='tab',
 			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'}],
-			value = 'drinker',
+			value = 'bar',
 			), 
 	html.Div(style={'width':'100%'} , id='output'),
     html.Div(dte.DataTable(rows=[{}]), style={'display': 'none'})
@@ -202,7 +274,7 @@ def update_output(value):
 	#print(s)
 	return generate_tab(s)
 
-#callback for dropdown
+#callback for drinker dropdown
 @app.callback(
     dash.dependencies.Output('d_info', 'children'),
     [dash.dependencies.Input('drinker_drop', 'value')])
@@ -211,6 +283,16 @@ def update_output(value):
 	s = '{}'.format(value)
 	#print(s)
 	return generate_drinker(s)
+	
+#callback for bar dropdown
+@app.callback(
+    dash.dependencies.Output('b_info', 'children'),
+    [dash.dependencies.Input('bar_drop', 'value')])
+	
+def update_output(value):
+	s = '{}'.format(value)
+	#print(s)
+	return generate_beer(s)
 
 # Loading screen CSS
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/brPBPO.css"})
