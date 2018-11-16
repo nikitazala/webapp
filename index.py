@@ -29,6 +29,7 @@ def get_options(tab):
 		query = "select bar_id from bar"
 	elif (tab == 'beer'):
 		query = "select item_id from beer"	
+	else: return []
 	cursor.execute(query)
 	temp = cr_list(cursor)
 	
@@ -68,8 +69,22 @@ def generate_tab(tab):
         ], className="six columns"),
     ], className="row"),html.Hr(),
 		html.Div(style={},id = 'b_info')]
+		
 	elif (tab == "beer"):
-		x = "Beer"
+		x = [html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
+        html.Div(style={'width':'30%'} ,children=[
+            html.Label(style={'font':'20px Britannic, serif'},children='Select a beer:')
+        ], className="six columns"),
+		html.Div(style={'width':'65%'} ,children=[
+           html.Div(style={'width':'100%'},children=dcc.Dropdown(
+			#style={'font':'25px'}
+			id='beer_drop',
+			options=opt,
+			value =4
+		))    
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+		html.Div(style={},id = 'beer_info')]
 	else:
 		x = "SQL"
 	return x
@@ -119,7 +134,7 @@ def generate_drinker(d):
 		temp_bid.append(temp_bar_n[0])
 		temp_time.append(i[2])
 		temp_total.append(i[3])
-	print(temp_tid)
+	#print(temp_tid)
 	temp_tran = pd.DataFrame({'transaction_id':temp_tid})
 	temp_tran['Bar']=temp_bid
 	temp_tran['time']=temp_time
@@ -185,10 +200,11 @@ def generate_drinker(d):
 		)],className="six columns"),
 	], className="row"),
 	
+	
 	] 
 	return x
 	
-def generate_beer(b):
+def generate_bar(b):
 	query = "select bar_id,name,addr,city,phone,cast(open_hours as time),cast(close_hours as time) from bar where bar_id="+str(b)
 	cursor.execute(query)
 	temp = cr_list(cursor)
@@ -208,7 +224,59 @@ def generate_beer(b):
 	for i in range(24):
 		temp_c[i] = (temp_c[i]/s_c)*100
 		temp_tot[i] = (temp_tot[i]/s_tot)*100
+	
+	query = "select drinker_id from transaction where bar_id="+ str(b) +" group by drinker_id order by sum(total) desc limit 10;"
+	cursor.execute(query)
+	temp_g1_x = cr_list(cursor)
+	temp_g1_x1=[]
+	
+	for i in temp_g1_x:
+		query = "select drinker from drinker where drinker_id="+str(i)
+		cursor.execute(query)
+		temp_x = cr_list(cursor)
+		temp_g1_x1.append(temp_x[0])
+	
+	query = "select sum(total) as s from transaction where bar_id="+ str(b) +" group by drinker_id order by s desc limit 10;"
+	cursor.execute(query)
+	temp_g1_y = cr_list(cursor)
+	
+	
+	query = "select item_id from tran_details where transaction_id in (select transaction_id from transaction where bar_id="+ str(b) +") group by item_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g2_x = cr_list(cursor)
+	temp_g2_x1=[]
+	temp_g3_x=[]
+	
+	for i in temp_g2_x:
+		query = "select item_name from item where item_id="+str(i)
+		cursor.execute(query)
+		temp_x = cr_list(cursor)
+		temp_g2_x1.append(temp_x[0])
 		
+		query = "select manufacturer from beer where item_id="+str(i)
+		cursor.execute(query)
+		temp_x = cr_list(cursor)
+		if (len(temp_x)>0):
+			temp_g3_x.append(temp_x[0])
+		else:
+			temp_g3_x.append("null")
+	
+	query = "select sum(quantity) from tran_details where transaction_id in (select transaction_id from transaction where bar_id="+ str(b) +") group by item_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g2_y = cr_list(cursor)
+	temp_g3_y = []
+	temp_g3_x1= []
+	i=0;
+	for i in range(len(temp_g3_x)):
+		if(temp_g3_x[i]=="null"):
+			pass
+		else:
+			temp_g3_x1.append(temp_g3_x[i])
+			temp_g3_y.append(temp_g2_y[i])
+			i=i+1
+	
+	#print(temp_g3_x1)
+	#print(temp_g3_y)
 	
 	val = [1,2,3,4,5,6,7,8]	
 	x = [html.Div(children=[
@@ -241,11 +309,219 @@ def generate_beer(b):
 				}
 			)
         ], className="six columns"),
-    ], className="row"),html.Hr()
+    ], className="row"),html.Hr(),
+	#graphs 1,2
+	html.Div(children=[
+        html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Top Drinkers'),
+            html.Div(style={'font-size':'15px',},id='bar_g1_div',children =[
+			dcc.Graph(
+			id='bar_g1',
+				figure={
+					'data': [
+						{'x': temp_g1_x1, 'y': temp_g1_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Drinker'},
+						'yaxis' : {'title':'Spending'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+		html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Popular Items'),
+            html.Div(style={'font-size':'15px',},id='bar_g2_div',children =[
+			dcc.Graph(
+			id='bar_g2',
+				figure={
+					'data': [
+						{'x': temp_g2_x1, 'y': temp_g2_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Items'},
+						'yaxis' : {'title':'Sales'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+	
+	#graphs 3,4
+	html.Div(children=[
+        html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Top Manufacturers'),
+            html.Div(style={'font-size':'15px',},id='bar_g3_div',children =[
+			dcc.Graph(
+			id='bar_g3',
+				figure={
+					'data': [
+						{'x': temp_g3_x1, 'y': temp_g3_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Manufacturer'},
+						'yaxis' : {'title':'Sales'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+		html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Popular Beers'),
+            html.Div(style={'font-size':'15px',},id='bar_g2_div',children =[
+			dcc.Graph(
+			id='bar_g2',
+				figure={
+					'data': [
+						{'x': temp_g2_x1, 'y': temp_g2_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Items'},
+						'yaxis' : {'title':'Sales'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+	
+	
 	
 	]
 	return x
 	
+def generate_beer(b):
+	query = "select item_name from item where item_id="+str(b)
+	cursor.execute(query)
+	temp_bn = cr_list(cursor)[0]
+	
+	query = "select manufacturer from beer where item_id="+str(b)
+	cursor.execute(query)
+	temp_mn = cr_list(cursor)[0]
+	
+	query = "select hour(time) as t, sum(quantity) from tran_details a join transaction b on a.transaction_id = b.transaction_id where item_id = "+ str(b) +" group by t"
+	cursor.execute(query)
+	temp_td = cr_list(cursor)
+	temp_t=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+	temp_q=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+	#temp_tot = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+	for i in temp_td:
+		temp_q[i[0]] = i[1]
+		#temp_tot[i[0]] = i[2]
+	s_c = sum(temp_q)
+	#s_tot = sum(temp_tot)
+	for i in range(24):
+		temp_q[i] = (temp_q[i]/s_c)*100
+		#temp_tot[i] = (temp_tot[i]/s_tot)*100
+
+	query = "select bar_id from tran_details a join transaction b on a.transaction_id = b.transaction_id where item_id = "+ str(b) +" group by bar_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g1_x = cr_list(cursor)
+	temp_g1_x1=[]
+	
+	for i in temp_g1_x:
+		query = "select name from bar where bar_id="+str(i)
+		cursor.execute(query)
+		temp_x = cr_list(cursor)
+		temp_g1_x1.append(temp_x[0])
+	
+	query = "select sum(quantity) from tran_details a join transaction b on a.transaction_id = b.transaction_id where item_id = "+ str(b) +" group by bar_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g1_y = cr_list(cursor)
+	
+	
+	query = "select drinker_id from tran_details a join transaction b on a.transaction_id = b.transaction_id where item_id = "+ str(b) +" group by drinker_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g2_x = cr_list(cursor)
+	temp_g2_x1=[]
+	
+	for i in temp_g2_x:
+		query = "select drinker from drinker where drinker_id="+str(i)
+		cursor.execute(query)
+		temp_x = cr_list(cursor)
+		temp_g2_x1.append(temp_x[0])
+	
+	query = "select sum(quantity) from tran_details a join transaction b on a.transaction_id = b.transaction_id where item_id = "+ str(b) +" group by drinker_id order by sum(quantity) desc limit 10"
+	cursor.execute(query)
+	temp_g2_y = cr_list(cursor)
+	
+		
+	x=[html.Div(children=[
+        html.Div(style={'width':'27%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Beer Info'),
+            html.Div(style={'font-size':'15px',},id='beer_information',children =[
+			html.Table([
+			html.Tr( [html.Td(children = "Item ID"),html.Td(children = ":"),html.Td(children = b)]),
+			html.Tr( [html.Td(children = "Name"),html.Td(children = ":"),html.Td(children = temp_bn)]),
+			html.Tr( [html.Td(children = "Manufacturer"),html.Td(children = ":"),html.Td(children = temp_mn)]),
+			])
+			])
+        ], className="six columns"),
+		html.Div(style={'width':'67%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Time distribution of sales'),
+            dcc.Graph(
+				id='td_beer',
+				figure={
+					'data': [
+						{'x': temp_t, 'y': temp_q , 'name': 'People','type': 'line'},
+						#{'x': temp_t, 'y': temp_tot , 'name': 'Income', 'type': 'line'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Time'},
+						'yaxis' : {'title':'Quantity sold'},
+					}
+				}
+			)
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+	#graphs 1,2
+	html.Div(children=[
+        html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Top Bars'),
+            html.Div(style={'font-size':'15px',},id='bar_g1_div',children =[
+			dcc.Graph(
+			id='beer_g1',
+				figure={
+					'data': [
+						{'x': temp_g1_x1, 'y': temp_g1_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Bar'},
+						'yaxis' : {'title':'Sales'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+		html.Div(style={'width':'47%'} ,children=[
+            html.H4(style={'font-weight':'bold'},children='Top Drinkers'),
+            html.Div(style={'font-size':'15px',},id='bar_g2_div',children =[
+			dcc.Graph(
+			id='beer_g2',
+				figure={
+					'data': [
+						{'x': temp_g2_x1, 'y': temp_g2_y , 'type': 'bar'},
+					],
+					'layout': {
+						#'title': "Max bought beers",
+						'xaxis' : {'title':'Drinkers'},
+						'yaxis' : {'title':'Quantity bought'},
+					}
+				}
+			)
+			])
+        ], className="six columns"),
+    ], className="row"),html.Hr(),
+	]
+	return x
+
 #initialize application
 app = dash.Dash()
 server = app.server
@@ -256,7 +532,7 @@ app.layout = html.Div(style={'backgroundImage':'url("http://www.designbolts.com/
 
 	dcc.Tabs(
 			id='tab',
-			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'}],
+			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'}, {'label':'Modification', 'value':'modify'}],
 			value = 'drinker',
 			), 
 	html.Div(style={'width':'100%'} , id='output'),
@@ -288,6 +564,16 @@ def update_output(value):
 @app.callback(
     dash.dependencies.Output('b_info', 'children'),
     [dash.dependencies.Input('bar_drop', 'value')])
+	
+def update_output(value):
+	s = '{}'.format(value)
+	#print(s)
+	return generate_bar(s)
+	
+#callback for beer dropdown
+@app.callback(
+    dash.dependencies.Output('beer_info', 'children'),
+    [dash.dependencies.Input('beer_drop', 'value')])
 	
 def update_output(value):
 	s = '{}'.format(value)
