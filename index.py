@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import mysql.connector
 import dash_table_experiments as dte
+import base64
 
 cnx = mysql.connector.connect(user='user', password='password',
                               host='cs336-nz132.cgwqde3pqnzp.us-east-2.rds.amazonaws.com',
@@ -21,6 +22,9 @@ def cr_list(c):
             r.append(i[0])
     return r
 
+image_filename = 'drinkers.jpg' # replace with your own image
+encoded_image = base64.b64encode(open(image_filename, 'rb').read())	
+	
 def get_options(tab):
 	#print(tab)
 	if(tab == 'drinker'):
@@ -39,7 +43,8 @@ def get_options(tab):
 def generate_tab(tab):
 	opt = get_options(tab)
 	if(tab=='drinker'):
-		x =  [html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
+		x =  [html.Div(style={'backgroundImage':'url("https://res.cloudinary.com/stephens-media/image/upload/v1533067330/RJ/manual/nflbarstv_loop.gif")','height':'700px','width':'100%'}),
+		html.Hr(),html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
         html.Div(style={'width':'30%'} ,children=[
             html.Label(style={'font':'20px Britannic, serif'},children='Select a drinker:')
         ], className="six columns"),
@@ -55,7 +60,8 @@ def generate_tab(tab):
 		html.Div(style={},id = 'd_info')]
 		
 	elif (tab == "bar"):
-		x = [html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
+		x = [html.Div(style={'backgroundImage':'url("https://res.cloudinary.com/stephens-media/image/upload/v1533067330/RJ/manual/nflbarstv_loop.gif")','height':'700px','width':'100%'}),
+		html.Hr(),html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
         html.Div(style={'width':'30%'} ,children=[
             html.Label(style={'font':'20px Britannic, serif'},children='Select a bar:')
         ], className="six columns"),
@@ -71,7 +77,8 @@ def generate_tab(tab):
 		html.Div(style={},id = 'b_info')]
 		
 	elif (tab == "beer"):
-		x = [html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
+		x = [html.Div(style={'backgroundImage':'url("https://res.cloudinary.com/stephens-media/image/upload/v1533067330/RJ/manual/nflbarstv_loop.gif")','height':'700px','width':'100%'}),
+		html.Hr(),html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
         html.Div(style={'width':'30%'} ,children=[
             html.Label(style={'font':'20px Britannic, serif'},children='Select a beer:')
         ], className="six columns"),
