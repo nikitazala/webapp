@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import mysql.connector
 import dash_table_experiments as dte
-import base64
 
 cnx = mysql.connector.connect(user='user', password='password',
                               host='cs336-nz132.cgwqde3pqnzp.us-east-2.rds.amazonaws.com',
@@ -22,8 +21,6 @@ def cr_list(c):
             r.append(i[0])
     return r
 
-image_filename = 'drinkers.jpg' # replace with your own image
-encoded_image = base64.b64encode(open(image_filename, 'rb').read())	
 	
 def get_options(tab):
 	#print(tab)
