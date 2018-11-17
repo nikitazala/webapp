@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import mysql.connector
 import dash_table_experiments as dte
+import base64
+import sys
 
 cnx = mysql.connector.connect(user='user', password='password',
                               host='cs336-nz132.cgwqde3pqnzp.us-east-2.rds.amazonaws.com',
@@ -21,6 +23,8 @@ def cr_list(c):
             r.append(i[0])
     return r
 
+image_filename = 'drinkers.jpg' # replace with your own image
+encoded_image = base64.b64encode(open(image_filename, 'rb').read())	
 	
 def get_options(tab):
 	#print(tab)
@@ -40,7 +44,7 @@ def get_options(tab):
 def generate_tab(tab):
 	opt = get_options(tab)
 	if(tab=='drinker'):
-		x =  [html.Div(style={'backgroundImage':'url("https://res.cloudinary.com/stephens-media/image/upload/v1533067330/RJ/manual/nflbarstv_loop.gif")','height':'700px','width':'100%'}),
+		x =  [html.Div(style={'backgroundImage':'url("http://insightcounselingllc.com/wp-content/uploads/2015/09/bigstock-Group-of-young-multi-ethnic-fr-65952550.jpg")','height':'700px','width':'100%'}),
 		html.Hr(),html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
         html.Div(style={'width':'30%'} ,children=[
             html.Label(style={'font':'20px Britannic, serif'},children='Select a drinker:')
@@ -74,7 +78,7 @@ def generate_tab(tab):
 		html.Div(style={},id = 'b_info')]
 		
 	elif (tab == "beer"):
-		x = [html.Div(style={'backgroundImage':'url("https://res.cloudinary.com/stephens-media/image/upload/v1533067330/RJ/manual/nflbarstv_loop.gif")','height':'700px','width':'100%'}),
+		x = [html.Div(style={'backgroundImage':'url("https://stmed.net/sites/default/files/styles/1440x900/public/beer-wallpapers-28209-1852976.jpg?itok=zWcb4G9k")','height':'700px','width':'100%'}),
 		html.Hr(),html.Br(),html.Div(style={'display': 'block','margin-left': 'auto','margin-right': 'auto','width':'40%'},children=[
         html.Div(style={'width':'30%'} ,children=[
             html.Label(style={'font':'20px Britannic, serif'},children='Select a beer:')
@@ -89,8 +93,26 @@ def generate_tab(tab):
         ], className="six columns"),
     ], className="row"),html.Hr(),
 		html.Div(style={},id = 'beer_info')]
+	elif(tab == "modify"):
+		x = [html.H4(style={'font-weight':'bold'},children='Bar/Drinker/Item queries. Constraints checked: Primary key'),dcc.Textarea(
+		id='bar_q',
+		placeholder='Enter a correctly formatted query for bar table...Note that bar_id,drinker_id and item_id are auto generated columns.',
+		value='',
+		style={'width': '100%'}
+		), html.Button('Execute', id='bar_exe'),
+		html.Div(id='bar_label',
+             children='')
+		]
 	else:
-		x = "SQL"
+		x = [html.H4(style={'font-weight':'bold'},children='Write select queries here:'),dcc.Textarea(
+		id='select_q',
+		placeholder='Enter query',
+		value='',
+		style={'width': '100%'}
+		),html.Button('Execute', id='select_exe'),
+		html.Div(id='select_label',
+             children='')
+		]
 	return x
 
 def generate_drinker(d):
@@ -532,11 +554,11 @@ server = app.server
 app.config['suppress_callback_exceptions']=True
 
 #application layout
-app.layout = html.Div(style={'backgroundImage':'url("http://www.designbolts.com/wp-content/uploads/2013/02/Golf-Shirt-Grey-Seamless-Pattern-For-Website-Background.jpg")','borderRadius':'10px','min-height':'95vh'},children=[
+app.layout = html.Div(style={'backgroundImage':'url("https://blog.visme.co/wp-content/uploads/2017/07/50-Beautiful-and-Minimalist-Presentation-Backgrounds-047.jpg")','borderRadius':'10px','min-height':'95vh'},children=[
 
 	dcc.Tabs(
 			id='tab',
-			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'}, {'label':'Modification', 'value':'modify'}],
+			tabs=[{'label':'Drinker', 'value':'drinker'},{'label':'Bar', 'value':'bar'},{'label':'Beer', 'value':'beer'},{'label':'SQL Query Inerface', 'value':'sql'},{'label':'Modification', 'value':'modify'}],
 			value = 'drinker',
 			), 
 	html.Div(style={'width':'100%'} , id='output'),
@@ -584,6 +606,70 @@ def update_output(value):
 	#print(s)
 	return generate_beer(s)
 
+#button for bar/drinker/item execute
+@app.callback(
+	dash.dependencies.Output('bar_label', 'children'),
+	[dash.dependencies.Input('bar_exe', 'n_clicks')],
+	[dash.dependencies.State('bar_q', 'value')])
+
+def update_output(n_clicks, value):
+	query = '{}'.format(value)
+	
+	if(query==""):
+		return
+	
+	try:
+		cursor.execute(query)
+	except:
+		err = str(sys.exc_info()[0]).split(".")[-1][:-2]
+		return "Unexpected error: " + str(err)
+		
+	cnx.commit()
+	#for i in cursor:
+	if(cursor.rowcount>0):
+		return "Successful." + str(cursor.rowcount) + " rows affected"
+	elif(cursor.rowcount==-1):
+		return
+	else:
+		return "0 rows affected"
+		
+@app.callback(
+	dash.dependencies.Output('select_label', 'children'),
+	[dash.dependencies.Input('select_exe', 'n_clicks')],
+	[dash.dependencies.State('select_q', 'value')])
+
+def update_output(n_clicks, value):
+	query = '{}'.format(value)
+	
+	if(query==""):
+		return
+	
+	
+	try:
+		temp = pd.read_sql_query(query,cnx)
+		
+	except:
+	#	err = str(sys.exc_info()[0]).split(".")[-1][:-2]
+		return "Unexpected error. Verify syntax."
+		
+	#cnx.commit()
+	#for i in cursor:
+	'''
+	if(cursor.rowcount>0):
+		return "Successful." + str(cursor.rowcount) + " rows affected"
+	elif(cursor.rowcount==-1):
+		return
+	else:
+		return "0 rows affected"
+	'''
+	x = [dte.DataTable(
+			rows=temp.to_dict('records'),
+			filterable=True,
+			sortable=True,
+			id='transactions')]
+	
+	return x
+	
 # Loading screen CSS
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/brPBPO.css"})
 	
