@@ -730,11 +730,12 @@ def update_output(n_clicks, input1, input2, input3, input4, input5):
 		while(j<len(items)):  #loop for tran_details
 			#print("inside j while")
 			#i = random.randint(0,len(item1)-1)
-			i1=int(items[j])
-			#print(i1)
-			quantity = int(quan[j])
-			#print(quantity)
+			
 			try: #bar sells item? item already in transaction: primary key.
+				i1=int(items[j])
+				#print(i1)
+				quantity = int(quan[j])
+				#print(quantity)
 				cursor.execute("select price from sells where bar_id = "+ str(b1) +" and item_id="+str(i1))
 				i_price = cr_list(cursor)[0]
 				cursor.execute("insert into tran_details values("+ str(t_id) +","+ str(i1) +","+ str(quantity) +")")
@@ -743,11 +744,11 @@ def update_output(n_clicks, input1, input2, input3, input4, input5):
 				#print("tran_details")
 			except:
 				r = "Unexpected error. Please try again."
-				continue
+				return r
 		fin_cost = round(sum(cost),2)
 		#print(fin_cost)
 		tax = round(fin_cost*0.07,2)
-		total = fin_cost+tax+int(tip)
+		total = fin_cost+tax+float(tip)
 		cursor.execute("insert into transaction values("+ str(t_id) +","+str(b1)+","+str(d1)+",'"+date+"',"+str(tip)+","+str(tax)+","+str(total)+","+str(fin_cost)+")")
 		#print("transaction "+ str(t_id))
 		#t_id = t_id+1
