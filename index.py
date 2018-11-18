@@ -6,6 +6,8 @@ import pandas as pd
 import mysql.connector
 import dash_table_experiments as dte
 import sys
+import datetime
+from datetime import datetime as dt
 
 cnx = mysql.connector.connect(user='user', password='password',
                               host='cs336-nz132.cgwqde3pqnzp.us-east-2.rds.amazonaws.com',
@@ -270,6 +272,12 @@ def generate_bar(b):
 	temp_g2_x1=[]
 	temp_g3_x=[]
 	
+	query = "select item_id from sells where bar_id="+str(b)
+	cursor.execute(query)
+	temp_at_items = cr_list(cursor)
+	at_items_ol = [{'label':i,'value':i} for i in temp_at_items]
+	
+	
 	for i in temp_g2_x:
 		query = "select item_name from item where item_id="+str(i)
 		cursor.execute(query)
@@ -394,21 +402,15 @@ def generate_bar(b):
 			])
         ], className="six columns"),
 		html.Div(style={'width':'47%'} ,children=[
-            html.H4(style={'font-weight':'bold'},children='Popular Beers'),
+            html.H4(style={'font-weight':'bold'},children='Add transaction'),
             html.Div(style={'font-size':'15px',},id='bar_g2_div',children =[
-			dcc.Graph(
-			id='bar_g2',
-				figure={
-					'data': [
-						{'x': temp_g2_x1, 'y': temp_g2_y , 'type': 'bar'},
-					],
-					'layout': {
-						#'title': "Max bought beers",
-						'xaxis' : {'title':'Items'},
-						'yaxis' : {'title':'Sales'},
-					}
-				}
-			)
+			html.Table([
+				html.Tr( [html.Td(children = "Drinker ID"),html.Td(children = ":"),html.Td(children=dcc.Dropdown(id='at_drinker',options=get_options('drinker')))]),
+				html.Tr( [html.Td(children = "Item ID"),html.Td(children = ":"),html.Td(children=dcc.Dropdown(id='at_item',options=at_items_ol,multi=True))]),
+				html.Tr( [html.Td(children = "Quantity"),html.Td(children = ":"),html.Td(children = dcc.Input(id= 'at_quantity' ,placeholder='Seperated by commas...',type='text'))]),
+				html.Tr( [html.Td(children = "Tip"),html.Td(children = ":"),html.Td(children = dcc.Input(id= 'at_tip',placeholder='Enter tip...',type='text'))]),
+				html.Tr( [html.Td(children = html.Button('Add', id='at_add') ),html.Td(children = " "),html.Td(children = " ")]),
+				]),html.Div(id='at_out',children='')
 			])
         ], className="six columns"),
     ], className="row"),html.Hr(),
@@ -629,7 +631,8 @@ def update_output(n_clicks, value):
 		return
 	else:
 		return "0 rows affected"
-		
+
+#button for sql query interface
 @app.callback(
 	dash.dependencies.Output('select_label', 'children'),
 	[dash.dependencies.Input('select_exe', 'n_clicks')],
@@ -666,6 +669,95 @@ def update_output(n_clicks, value):
 			id='transactions')]
 	
 	return x
+
+#button for adding transaction in bar page
+@app.callback(
+	dash.dependencies.Output('at_out', 'children'),
+	[dash.dependencies.Input('at_add', 'n_clicks')],
+	[dash.dependencies.State('bar_drop', 'value'),
+	dash.dependencies.State('at_drinker', 'value'),
+	dash.dependencies.State('at_item', 'value'),
+	dash.dependencies.State('at_quantity', 'value'),
+	dash.dependencies.State('at_tip', 'value')
+	])
+
+def update_output(n_clicks, input1, input2, input3, input4, input5):
+	r = ""
+	n = '{}'.format(n_clicks)
+	b1 = '{}'.format(input1)
+	d1 = '{}'.format(input2)
+	items = '{}'.format(input3)
+	quan = ('{}'.format(input4)).split(',')
+	tip = '{}'.format(input5)
+	
+	#print(len(items))
+	#print(items)
+	if(items=="None"):
+		return r
+	items = items.replace('[','').replace(']','').split(',')
+	#print(b1)
+	#print(d1)
+	#print(items)
+	#print(quan)
+	#print(tip)
+	
+	query = "select max(transaction_id) from transaction"
+	cursor.execute(query)
+	t_id = (cr_list(cursor)[0])+1
+	#print(t_id)
+	
+	cursor.execute("select open_hours,close_hours from bar where bar_id ="+str(b1))
+	b_times = cr_list(cursor)
+	s = b_times[0][0].seconds
+	e = b_times[0][1].seconds
+	
+	#print(s)
+	#print(e)
+	
+	x1 = datetime.datetime.now()
+	date = dt.strftime(x1, '%Y-%m-%d %H:%M')
+	t_s = datetime.timedelta(hours=x1.hour,minutes=x1.minute,seconds=x1.second).total_seconds()
+	#print(t_s)
+	
+	if(t_s>=s or t_s<=e): #time constraint
+		#print("after time constraint")
+		cost=[]
+		j=0
+        
+		#cursor.execute("select item_id from sells where bar_id="+str(b1))
+		#item1 = cr_list(cursor)
+        
+		while(j<len(items)):  #loop for tran_details
+			#print("inside j while")
+			#i = random.randint(0,len(item1)-1)
+			i1=int(items[j])
+			#print(i1)
+			quantity = int(quan[j])
+			#print(quantity)
+			try: #bar sells item? item already in transaction: primary key.
+				cursor.execute("select price from sells where bar_id = "+ str(b1) +" and item_id="+str(i1))
+				i_price = cr_list(cursor)[0]
+				cursor.execute("insert into tran_details values("+ str(t_id) +","+ str(i1) +","+ str(quantity) +")")
+				j=j+1
+				cost.append(i_price*quantity)
+				#print("tran_details")
+			except:
+				r = "Unexpected error. Please try again."
+				continue
+		fin_cost = round(sum(cost),2)
+		#print(fin_cost)
+		tax = round(fin_cost*0.07,2)
+		total = fin_cost+tax+int(tip)
+		cursor.execute("insert into transaction values("+ str(t_id) +","+str(b1)+","+str(d1)+",'"+date+"',"+str(tip)+","+str(tax)+","+str(total)+","+str(fin_cost)+")")
+		#print("transaction "+ str(t_id))
+		#t_id = t_id+1
+		r = "Transaction added with transaction_id: "+str(t_id)
+		cnx.commit()
+	else:
+		r = "The bar is closed. Please come later..."
+	
+	
+	return r
 	
 # Loading screen CSS
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/brPBPO.css"})
