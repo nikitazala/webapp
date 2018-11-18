@@ -760,6 +760,38 @@ def update_output(n_clicks, input1, input2, input3, input4, input5):
 	
 	return r
 	
+#callback for clearing drinking dropdown in add transaction
+@app.callback(
+    dash.dependencies.Output('at_drinker', 'value'),
+    [dash.dependencies.Input('at_add', 'n_clicks')])
+	
+def update_output(value):
+	return ""
+	
+#callback for clearing item dropdown in add transaction
+@app.callback(
+    dash.dependencies.Output('at_item', 'value'),
+    [dash.dependencies.Input('at_add', 'n_clicks')])
+	
+def update_output(value):
+	return ""
+	
+#callback for clearing quantity in add transaction
+@app.callback(
+    dash.dependencies.Output('at_quantity', 'value'),
+    [dash.dependencies.Input('at_add', 'n_clicks')])
+	
+def update_output(value):
+	return ""
+	
+#callback for clearing tip in add transaction
+@app.callback(
+    dash.dependencies.Output('at_tip', 'value'),
+    [dash.dependencies.Input('at_add', 'n_clicks')])
+	
+def update_output(value):
+	return ""
+	
 # Loading screen CSS
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/brPBPO.css"})
 	
