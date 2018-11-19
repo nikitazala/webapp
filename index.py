@@ -701,6 +701,10 @@ def update_output(n_clicks, input1, input2, input3, input4, input5):
 	#print(quan)
 	#print(tip)
 	
+	if(len(items)!=len(quan)):
+		r = "Quantities and items dont match"
+		return r
+	
 	query = "select max(transaction_id) from transaction"
 	cursor.execute(query)
 	t_id = (cr_list(cursor)[0])+1
